@@ -22,8 +22,21 @@ public class FlowLayout extends FrameLayout {
     private View dragView;
     private int downY;
     private int oldY;
-    private Handler handler = new Handler();
-    Runnable runnable = new Runnable() {
+    private int newY;
+    private StateView mStateView;
+    private int newTopY;
+    private int newBottomY;
+
+    private class StateView{
+        private int left;
+        private int top;
+        private int right;
+        private int bottom;
+
+
+    }
+
+    private  Runnable mRunnable = new Runnable() {
         @Override
         public void run() {
             requestLayout();
@@ -41,12 +54,13 @@ public class FlowLayout extends FrameLayout {
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        Log.d("Flow Layout", "onLayout" +String.valueOf(downY));
+        Log.d("Flow Layout", "onLayout" + String.valueOf(downY));
+//        super.onLayout(changed, left, top, right, bottom);
         if (dragView != null) {
-            dragView.layout(dragView.getLeft(), dragView.getTop() - downY, dragView.getRight(), dragView.getBottom());
+            dragView.layout(dragView.getLeft(), newTopY, dragView.getRight(), newBottomY);
         }
-        super.onLayout(changed, left, top, right, bottom);
-        invalidate();
+
+//        invalidate();
     }
 
     @Override
@@ -60,7 +74,6 @@ public class FlowLayout extends FrameLayout {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
         final int action = event.getAction();
-        float x = event.getX();
 
         switch (action) {
             case MotionEvent.ACTION_DOWN:
@@ -73,8 +86,10 @@ public class FlowLayout extends FrameLayout {
                         view.getLocationOnScreen(l);
                         if (isTouchableArea(l[0], l[1], view.getWidth(), view.getHeight(), (int) event.getX(), (int) event.getY())) {
                             dragView = view;
-
-                            oldY = (int) view.getY();
+//
+                            mStateView = new StateView();
+                            mStateView.bottom = dragView.getBottom();
+                            mStateView.top = dragView.getTop();
                         }
 
                     }
@@ -83,9 +98,11 @@ public class FlowLayout extends FrameLayout {
             case MotionEvent.ACTION_MOVE:
                 Log.d("Flow Layout", "ACTION_MOVE" + String.valueOf(event.getY()));
                 if (isDrag && dragView != null) {
-                    downY = (int) event.getY();
+                    newY = (int) event.getY();
+                    newTopY = mStateView.top - (downY-newY);
+                    newBottomY = mStateView.bottom - (downY-newY);
                     if(dragView!=null){
-                        requestLayout();
+                        postRequestLayout();
                     }
 
                 }
@@ -97,10 +114,12 @@ public class FlowLayout extends FrameLayout {
                 break;
             case MotionEvent.ACTION_UP:
                 isDrag = false;
-                downY = oldY;
+                newTopY = mStateView.top;
+                newBottomY = mStateView.bottom;
                 if(dragView!=null){
-                    requestLayout();
+                    postRequestLayout();
                 }
+                dragView = null;
 
                 break;
         }
@@ -116,6 +135,7 @@ public class FlowLayout extends FrameLayout {
     }
 
     private ArrayList<View> recursiveGetView(View root) {
+        Log.d("vkjdfvfv", "recGetView");
         ArrayList<View> views = new ArrayList<>();
         if (root instanceof ViewGroup) {
             ViewGroup viewGroup = ((ViewGroup) root);
@@ -126,5 +146,9 @@ public class FlowLayout extends FrameLayout {
             views.add(root);
         }
         return views;
+    }
+
+    private void postRequestLayout(){
+        getHandler().post(mRunnable);
     }
 }
